@@ -11,18 +11,18 @@
 # A rule with an unknown username is ignored by GitHub, so do not leave placeholders active.
 #
 # Default: the pilot owner reviews anything not listed below.
-# *                     @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
-# /pilot/               @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
-# /configs/             @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
-# /environment/         @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
-# /scripts/             @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
-# /prereg/              @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
-# /envs/                @ENVIRONMENT_AND_TESTS_USERNAME @PILOT_OWNER_USERNAME
-# /metrics/             @METRICS_AND_INTERVENTIONS_USERNAME @PILOT_OWNER_USERNAME
-# /analysis/            @Abdullah9712 @PILOT_OWNER_USERNAME
-# /results/             @Abdullah9712 @PILOT_OWNER_USERNAME
-# /results/ledger.*     @PILOT_OWNER_USERNAME @Abdullah9712
-# /results/pilot/       @PILOT_OWNER_USERNAME @Abdullah9712
-# /tests/test_ledger_schema.py    @Abdullah9712 @PILOT_OWNER_USERNAME
-# /docs/ledger_schema_memo.md     @Abdullah9712 @PILOT_OWNER_USERNAME
-# /studyb/              @STUDYB_AND_LITERATURE_USERNAME @PILOT_OWNER_USERNAME
+# *                     @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /pilot/               @Umair-WaseemE @SECOND_REVIEWER_USERNAME
+# /configs/             @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /environment/         @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /scripts/             @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /prereg/              @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /envs/                @ENVIRONMENT_AND_TESTS_USERNAME @Umair-Waseem
+# /metrics/             @METRICS_AND_INTERVENTIONS_USERNAME @Umair-Waseem
+# /analysis/            @Abdullah9712 @Umair-Waseem
+# /results/             @Abdullah9712 @Umair-Waseem
+# /results/ledger.*     @Umair-Waseem @Abdullah9712
+# /results/pilot/       @Umair-Waseem @Abdullah9712
+# /tests/test_ledger_schema.py    @Abdullah9712 @Umair-Waseem
+# /docs/ledger_schema_memo.md     @Abdullah9712 @Umair-Waseem
+# /studyb/              @STUDYB_AND_LITERATURE_USERNAME @Umair-Waseem
