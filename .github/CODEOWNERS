@@ -1,0 +1,28 @@
+# Code owners (First Tasks, Role 1 step 4). Every pull request needs a review from an owner of the
+# files it changes once the ruleset is on (First Tasks, Role 1 step 5; HANDOVER.md task 6).
+#
+# FILL IN THE REAL GITHUB USERNAMES, then remove the leading "# " of each rule line.
+# Give every path TWO owners: GitHub never counts a pull request author's own approval, so a path
+# with a single owner could never be merged by that owner once code-owner review is required.
+# The second owner of each line is a placeholder for another member (or the supervisor, given write
+# access to the repository: GitHub ignores a code owner without write permission).
+# The last matching rule wins, so the specific lines after /results/ must stay below it.
+# Only @Abdullah9712 is known from the repository history (author of PR #1, the ledger schema).
+# A rule with an unknown username is ignored by GitHub, so do not leave placeholders active.
+#
+# Default: the pilot owner reviews anything not listed below.
+# *                     @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
+# /pilot/               @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
+# /configs/             @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
+# /environment/         @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
+# /scripts/             @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
+# /prereg/              @PILOT_OWNER_USERNAME @SECOND_REVIEWER_USERNAME
+# /envs/                @ENVIRONMENT_AND_TESTS_USERNAME @PILOT_OWNER_USERNAME
+# /metrics/             @METRICS_AND_INTERVENTIONS_USERNAME @PILOT_OWNER_USERNAME
+# /analysis/            @Abdullah9712 @PILOT_OWNER_USERNAME
+# /results/             @Abdullah9712 @PILOT_OWNER_USERNAME
+# /results/ledger.*     @PILOT_OWNER_USERNAME @Abdullah9712
+# /results/pilot/       @PILOT_OWNER_USERNAME @Abdullah9712
+# /tests/test_ledger_schema.py    @Abdullah9712 @PILOT_OWNER_USERNAME
+# /docs/ledger_schema_memo.md     @Abdullah9712 @PILOT_OWNER_USERNAME
+# /studyb/              @STUDYB_AND_LITERATURE_USERNAME @PILOT_OWNER_USERNAME

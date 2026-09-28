@@ -1,0 +1,14 @@
+# Store text with LF line endings in the repository whatever the contributor's OS, so that file
+# hashes (for example results/ledger_schema.sha256) mean the same bytes on every machine.
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.csv text eol=lf
+*.docx binary
+*.pdf binary
+*.parquet binary
+*.pt binary
+*.sha256 binary

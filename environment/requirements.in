@@ -1,0 +1,22 @@
+# Direct requirements of the study (Table 3.1 "Software versions"; Appendix A).
+# The exact environment is environment/requirements.lock.txt, written by scripts/setup_env.sh
+# with `pip freeze` on the workstation. Install that file, not this one, to reproduce runs.
+#
+# Python 3.10 is required: OmniSafe 0.5.0 is tested on Python 3.8-3.10 (its README; its conda
+# recipe pins python = 3.10) and safety-gymnasium pins pygame 2.1.0, which has no wheel above 3.10.
+# Linux is required for registered runs: OmniSafe does not officially support Windows.
+
+omnisafe==0.5.0
+# What `pip install omnisafe==0.5.0` resolves on Python 3.10 (verified 2026-09-27): pip falls back
+# from safety-gymnasium 1.0.0 to 0.4.1 with mujoco 2.3.0. Pinned explicitly so it cannot drift.
+safety-gymnasium==0.4.1
+mujoco==2.3.0
+gymnasium==0.28.1
+# REQUIRED: without this pin pip installs numpy 2.x, and `import omnisafe` fails because OmniSafe
+# pins pandas==2.0.3, which is binary-incompatible with numpy 2 ("numpy.dtype size changed").
+numpy==1.26.4
+pandas==2.0.3
+# Results ledger (results/ledger_schema.py) and tests. Versions verified with the ledger's 25 tests.
+pyarrow==25.0.1
+pydantic==2.13.5
+pytest==9.1.1

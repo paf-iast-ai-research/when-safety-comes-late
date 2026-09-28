@@ -1,0 +1,9 @@
+{
+  "files": {
+    "CPPOPID.yaml": "5d390f024323605739a89e2b18b2135615dea62aec53e64f410c1bac7142dd89",
+    "PPO.yaml": "add762c2a4420c405f91fa429986acb2c534c9335ec133dbdc8ef29949302087",
+    "PPOLag.yaml": "e6477193e49b4f871b0360a2f7317ff3d00f2a4376c0a7448e420daf3169059e"
+  },
+  "omnisafe_version": "0.5.0",
+  "source_directory": "omnisafe/configs/on-policy"
+}
