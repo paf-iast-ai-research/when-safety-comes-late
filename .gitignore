@@ -19,3 +19,16 @@ Thumbs.db
 
 # Local build artifacts
 *.log
+# Run outputs and checkpoints live outside the repository (First Tasks, Role 1 step 4)
+runs/
+checkpoints/
+data/
+*.pt
+*.pth
+torch_save/
+tb/
+wandb/
+progress.csv
+# Parquet ledgers are tracked on purpose (results/ledger.parquet, results/pilot/ledger.parquet)
+*.lock
+*.tmp
