@@ -1,8 +1,8 @@
 """configs/registered.py against the registered text (First Tasks, habit 2).
 
-Each constant is checked twice: its value is asserted, and the phrase of the pre-registration that
-fixes it must appear verbatim in prereg/Preregistration.docx. A constant that drifts, or a
-document that changes without the constant, fails here.
+Each registered value is asserted, and the phrase of the pre-registration that fixes it (or the
+values it is derived from) must appear verbatim in prereg/Preregistration.docx. A constant that
+drifts, or a document that changes without the constant, fails here.
 """
 
 from __future__ import annotations
@@ -18,13 +18,16 @@ import pytest
 
 from configs import registered as R
 
-DOCX = Path(__file__).resolve().parents[1] / "prereg" / "Preregistration.docx"
+ROOT = Path(__file__).resolve().parents[1]
+DOCX = ROOT / "prereg" / "Preregistration.docx"
 
 
 @lru_cache(maxsize=1)
 def prereg_text() -> str:
-    xml = zipfile.ZipFile(DOCX).read("word/document.xml").decode("utf-8")
+    with zipfile.ZipFile(DOCX) as docx:
+        xml = docx.read("word/document.xml").decode("utf-8")
     xml = re.sub(r"</w:p>", "\n", xml)
+    xml = re.sub(r"</w:tc>", " | ", xml)  # a phrase cannot match across a table-cell boundary
     return re.sub(r"[ \t]+", " ", html.unescape(re.sub(r"<[^>]+>", "", xml)))
 
 
@@ -107,7 +110,8 @@ CASES = [
     ("LATE_ONSET_FRACTIONS", (0.10, 0.25, 0.50), "at N = 0.10, 0.25, 0.50, in three tasks"),
     ("ONSET_SHAPES", ("abrupt", "ramp"), "Abrupt; linear ramp"),
     ("STEP_MATCHING_CONTROLS", ("constrained_steps", "total_steps"), "Constrained-steps matched; total-steps matched"),
-    ("TREATMENTS", ("reset", "injection", "additional_constrained"), "Reset, injection, additional constrained training"),
+    ("TREATMENTS", ("reset", "injection", "additional_constrained"),
+     "Reset, injection, additional constrained training"),
     ("CONTROLLER_VARIANTS", ("warm_started", "rate_limited"), "Warm-started and rate-limited multiplier"),
     ("PID_VARIANT", "pid", "PID multiplier, abrupt arms, SafetyPointGoal1-v0"),
     ("PID_TASKS", ("SafetyPointGoal1-v0",), "run as a further check on SafetyPointGoal1-v0 only"),
@@ -123,12 +127,33 @@ CASES = [
     ("PILOT_STUDY_A_SHAPE", "abrupt", "arms N = 0 and N = 0.50, abrupt, total-steps matched"),
     ("PILOT_STUDY_A_CONTROL", "total_steps", "abrupt, total-steps matched; seeds 0, 1, 2"),
     ("PILOT_BATTERY", ("hazard", "dynamics"), "battery conditions hazard relocation and dynamics perturbation"),
+    ("INTERVENTION_LAYERS", 2, "the last two layers of the actor (the output layer and the hidden layer before it)"),
+    ("FLOOR_SATISFACTION_RATE", 0.05, "a satisfaction rate below 5 percent"),
+    ("FLOOR_ARM_SHARE", 0.5, "If more than half of the arms have a satisfaction rate below 5 percent"),
+    ("INTERVAL_LEVEL", 0.95, "with two 95 percent intervals"),
+    ("INTERVAL_LEVEL_PRIMARY_STUDY_B", 0.975, "an interval that must exclude zero is the 97.5 percent interval"),
+    ("IQM_TRIM", 0.25, "the interquartile mean"),
+    ("H1_TREND_POINTS", 20, "twenty points: four onset fractions by five seeds"),
+    ("POWER_TARGET", 0.80, "has 80 percent power at a standardised difference of 2.02"),
+    ("G2_MIN_BUDGETS_SUPPORT", 3, "On at least three of the four unseen budgets"),
+    ("G2_MIN_BUDGETS_FALSIFY", 2, "on at least two of the four unseen budgets"),
+    ("G5_POINT_MAX", 0.05, "a point estimate of at most 5 percentage points"),
+    ("G5_UPPER_MAX", 0.10, "an interval whose upper limit is at most 10"),
+    ("SEARCH_SOURCES", ("Google Scholar", "Semantic Scholar", "arXiv", "OpenReview"),
+     "Google Scholar, Semantic Scholar, arXiv, OpenReview"),
+    ("SEARCH_CITATION_SEED", "Yao et al. (2023)",
+     "the citation lists of Yao et al. (2023) and of every paper that cites it"),
+    ("SEARCH_ADDED_PHRASES", ('"number of thresholds"', '"spacing"'),
+     'each with and without "number of thresholds" and "spacing"'),
 ]
 
 
 @pytest.mark.parametrize("name, expected, phrase", CASES, ids=[c[0] for c in CASES])
-def test_registered_value_and_source(name: str, expected, phrase: str) -> None:
-    assert getattr(R, name) == expected
+def test_registered_value_and_source(name: str, expected: object, phrase: str) -> None:
+    value = getattr(R, name)
+    assert value == expected and type(value) is type(expected), (name, value)
+    if isinstance(expected, tuple):  # 1000.0 == 1000: compare the element types too
+        assert all(type(a) is type(b) for a, b in zip(value, expected)), (name, value)
     assert phrase in prereg_text(), f"phrase for {name} not found in the pre-registration: {phrase!r}"
 
 
@@ -166,20 +191,122 @@ def test_u80_quantile_is_the_t_quantile_with_two_degrees_of_freedom() -> None:
     assert round((2 * p - 1) / math.sqrt(2 * p * (1 - p)), 3) == R.U80_T_QUANTILE
 
 
+def test_power_statements_match_part_5_5() -> None:
+    text = prereg_text()
+    assert "80 percent power at a standardised difference of 2.02, 55 percent at 1.5 and 29 percent at 1.0" in text
+    assert "with eight seeds the 80-percent point falls to 1.51, with ten to 1.33, with twelve to 1.20" in text
+    assert dict(R.POWER_REGISTERED_N5) == {2.02: 0.80, 1.5: 0.55, 1.0: 0.29}
+    assert dict(R.POWER_REGISTERED_D80) == {5: 2.02, 8: 1.51, 10: 1.33, 12: 1.20}
+
+
+def test_search_queries_are_table_c1_verbatim() -> None:
+    text = prereg_text()
+    assert "; ".join(R.SEARCH_QUERIES) + "; each with and without" in text
+    assert len(R.SEARCH_QUERIES) == 5
+
+
+def test_transfer_tasks_are_the_registered_point_pair() -> None:
+    # Table 2.2: "on the held-out task on the same robot (Goal to Button and Button to Goal)". The Car
+    # pair's held-out task is not registered (Q-transfer-obs); it must not appear here.
+    assert "the held-out task on the same robot (Goal to Button and Button to Goal)" in prereg_text()
+    assert dict(R.TRANSFER_TASKS) == {"SafetyPointGoal1-v0": "SafetyPointButton1-v0",
+                                      "SafetyPointButton1-v0": "SafetyPointGoal1-v0"}
+
+
+RUN_GATE_KEYS = {"Q-rounding", "Q-pilot-unconstrained-seed", "Q-seed-collision", "Q-surplus-arm-set",
+                 "Q-data-control-lr", "Q-selection-window", "Q-continuations", "Q-cost-critic", "Q-jc-window",
+                 "Q-ramp-step", "Q-warm-start", "Q-rate-limit", "Q-pid-eq9", "Q-reset-injection",
+                 "Q-plasticity-definitions", "Q-transfer-obs", "Q-budget-normalisation", "Q-level-jc",
+                 "Q-continuous-bins", "Q-search-before-pilot", "Q-studyb-order", "Q-determinism-late-onset"}
+RESULT_GATE_KEYS = {"Q-hazard", "Q-dynamics", "Q-studyb-eval", "Q-tie-break", "Q-matched-cost-set",
+                    "Q-arm-complete", "Q-controller-quantities", "Q-adapt-censoring"}
+REPORT_KEYS = {"Q-interrupted-run", "Q-g1-level", "Q-g3-pairing", "Q-g4-level", "Q-g2-run-equivalents",
+               "Q-final-cost-set", "Q-interval", "Q-h1-shape", "Q-controls-reading", "Q-support-falsify-overlap",
+               "Q-falsification-calibration", "Q-holm-families", "Q-threshold-arithmetic", "Q-iqm",
+               "Q-bootstrap-details", "Q-surplus-in-analysis", "Q-h3-scope", "Q-h4-reading", "Q-h0-scope",
+               "Q-g1-criteria", "Q-g2-outcome", "Q-g3-arms", "Q-g4-reading", "Q-floor-rule"}
+
+# PENDING keys registered after HANDOVER.md was last updated: the integrator adds them to section 9 (with a
+# star), after which they may be removed from here (a key both here and starred is accepted).
+HANDOVER_STAR_PENDING: set[str] = set()
+# PENDING keys whose answer the group changed at ratification: removed from ANSWERED_QUESTIONS until their code
+# follows the new answer (configs/registered.py, above ANSWERED_QUESTIONS), and listed here meanwhile.
+REOPENED_KEYS: set[str] = set()
+
+
+def test_open_question_kinds_are_disjoint() -> None:
+    assert not (RUN_GATE_KEYS & RESULT_GATE_KEYS or RUN_GATE_KEYS & REPORT_KEYS or RESULT_GATE_KEYS & REPORT_KEYS)
+
+
 def test_open_questions_are_named_and_answers_are_pending_keys() -> None:
-    keys = {"Q-rounding", "Q-pilot-unconstrained-seed", "Q-interrupted-run", "Q-seed-collision",
-            "Q-g1-level", "Q-g3-pairing", "Q-surplus-arm-set", "Q-data-control-lr", "Q-selection-window",
-            "Q-g4-level", "Q-continuations", "Q-g2-run-equivalents"}
+    keys = RUN_GATE_KEYS | RESULT_GATE_KEYS | REPORT_KEYS
     assert set(R.PENDING) == keys
     # HANDOVER.md section 9 marks exactly the PENDING keys with a star ("Q-key\*" in Markdown), so a
     # key added to or dropped from PENDING without updating the handover fails here.
-    handover = (Path(__file__).resolve().parents[1] / "HANDOVER.md").read_text(encoding="utf-8")
+    handover = (ROOT / "HANDOVER.md").read_text(encoding="utf-8")
     section_9 = re.search(r"^## 9\..*?(?=^## )", handover, flags=re.S | re.M)
     assert section_9 is not None, "HANDOVER.md has no section 9"
-    assert set(re.findall(r"(Q-[a-z0-9-]+)\\\*", section_9.group(0))) == keys
+    starred = set(re.findall(r"(Q-[a-z0-9-]+)\\\*", section_9.group(0)))
+    assert keys - HANDOVER_STAR_PENDING <= starred <= keys, sorted(starred ^ keys)
     # Only PENDING keys can be answered (HANDOVER.md task 11: answered by an amendment row of Table 9.1),
     # and a key is open exactly while it is not answered.
     assert R.ANSWERED_QUESTIONS <= keys
     assert all(R.is_open(key) == (key not in R.ANSWERED_QUESTIONS) for key in keys)
     with pytest.raises(KeyError):
         R.is_open("Q-unknown")
+
+
+def test_every_key_is_answered_by_the_decisions_of_2026_10_02() -> None:
+    """docs/DECISIONS.md (2026-10-02) answers every PENDING key, to be ratified in Table 9.1: ANSWERED_QUESTIONS is
+    an explicit sorted literal of all of them but REOPENED_KEYS (a key the group changes is removed there, and
+    listed in REOPENED_KEYS, until its code follows), and the decision record has a section for each."""
+    assert REOPENED_KEYS <= set(R.PENDING), sorted(REOPENED_KEYS - set(R.PENDING))
+    assert R.ANSWERED_QUESTIONS == frozenset(R.PENDING) - REOPENED_KEYS
+    source = (ROOT / "configs" / "registered.py").read_text(encoding="utf-8")
+    literal = source[source.index("ANSWERED_QUESTIONS: frozenset[str] = frozenset({"):]
+    literal = literal[:literal.index("})")]
+    listed = re.findall(r'"(Q-[a-z0-9-]+)"', literal)
+    assert listed == sorted(R.ANSWERED_QUESTIONS)
+    decisions = (ROOT / "docs" / "DECISIONS.md").read_text(encoding="utf-8")
+    assert "2026-10-02" in decisions
+    assert [key for key in R.PENDING if f"{key} (starred)" not in decisions] == []
+
+
+def _pending_text(key: str) -> str:
+    return " ".join(R.PENDING[key].split())
+
+
+def test_pending_texts_carry_what_the_code_applies() -> None:
+    """The group ratifies a key from its PENDING text: the text must name what the code implements.
+
+    Every key states its question and then its answer (docs/DECISIONS.md, 2026-10-02), which
+    ANSWERED_QUESTIONS accepts. Q-reset-injection: its claim about Nikishin et al. (2023) comes from two
+    search-engine extracts of the paper, the PDF unread (metrics/interventions.py, envs/onset.py).
+    Q-g4-reading: the ordering clause on the arm statistic (analysis.verdict.Reading.g4_order =
+    "arm_median"), 'within one horizon' as a spread below 1 (g4_within = "less_than_one") and the three
+    sensitivity readings beside it. Q-continuations: cut 3's shortened continuation keeps the full
+    continuation's 1,000,000-step schedule (pilot/manifest.py _cut_fewshot_short).
+    Q-controller-quantities: the analysis' censoring of recovery time (analysis.study_a).
+    Q-data-control-lr: one run of T + N*T steps whose extension restarts the rate (envs.onset.DataControlLR).
+    """
+    reset = _pending_text("Q-reset-injection")
+    assert "Nikishin et al. (2023, arXiv 2305.15555)" in reset
+    assert "two independent search-engine extracts of the paper" in reset and "the PDF could not be opened" in reset
+    g4 = _pending_text("Q-g4-reading")
+    assert "arm statistic" in g4 and "more than half of those budgets" in g4
+    assert "is less than 1" in g4 and "'within' as a spread of at most 1" in g4
+    assert "the ordering on a majority of the per-budget medians" in g4
+    continuations = _pending_text("Q-continuations")
+    assert "cut 3 ('fewshot_short')" in continuations and "80 percent" in continuations
+    assert "keeps the 1,000,000-step (50-epoch) schedule and stops after 200,000 steps" in continuations
+    recovery = _pending_text("Q-controller-quantities")
+    assert "plus one epoch" in recovery and "the shorter arm's horizon" in recovery
+    data_control = _pending_text("Q-data-control-lr")
+    assert "Answered: one run of T + N*T steps" in data_control and "envs.onset.DataControlLR" in data_control
+    # No leftover proposal wording in any case ("proposed:", "Proposed:", "proposal"); the one legitimate use is
+    # Q-rate-limit's logged "proposed (pre-clip) value" of the multiplier.
+    proposal = re.compile(r"\bpropos\w*\b(?! \(pre-clip\))", re.I)
+    probes = ("Proposed: x", "the proposal", "proposals", "The proposed (pre-clip) value")
+    assert [bool(proposal.search(text)) for text in probes] == [True, True, True, False]
+    assert all(" Answered: " in R.PENDING[key] and not proposal.search(R.PENDING[key]) for key in R.PENDING), sorted(
+        key for key in R.PENDING if " Answered: " not in R.PENDING[key] or proposal.search(R.PENDING[key]))

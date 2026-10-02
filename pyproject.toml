@@ -5,12 +5,12 @@ description = "Pre-registered study: constraint-onset timing and robustness in c
 requires-python = "==3.10.*"
 
 [tool.pytest.ini_options]
-# The repository root is on sys.path, so `results`, `configs` and `pilot` import without
-# __init__ files or `python -m pytest` (plain `pytest` failed to import `results` before).
+# The repository root is on sys.path, so the top-level packages (and `results`, which has no
+# __init__.py) import under plain `pytest` as under `python -m pytest`.
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "-m 'not slow'"  # `pytest -m slow` runs the training tests
+addopts = "-m 'not slow'"  # `pytest -m slow` runs the slow tests
 markers = [
     "omnisafe: needs the pinned OmniSafe stack (skipped when omnisafe is not installed)",
-    "slow: trains a short OmniSafe run (minutes)",
+    "slow: takes minutes (short OmniSafe training runs, fixed-batch collection, the full-resample analysis)",
 ]

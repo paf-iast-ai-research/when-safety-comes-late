@@ -11,4 +11,5 @@
 *.pdf binary
 *.parquet binary
 *.pt binary
+*.npy binary
 *.sha256 binary

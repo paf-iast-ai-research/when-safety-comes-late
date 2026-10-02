@@ -1,4 +1,10 @@
-pandas
-pyarrow
-pydantic
-pytest
+# Requirements of results/ledger_schema.py and tests/test_ledger_schema.py.
+# Pinned to the project stack: these versions must match
+# environment/requirements.in. The schema needs pydantic 2 (field_validator,
+# ConfigDict, ValidationInfo, BeforeValidator, AfterValidator) and
+# Python 3.10 (pyproject.toml requires-python ==3.10.*).
+numpy==1.26.4
+pandas==2.0.3
+pyarrow==25.0.1
+pydantic==2.13.5
+pytest==9.1.1

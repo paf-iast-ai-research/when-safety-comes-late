@@ -1,0 +1,14 @@
+{
+  "about": "Errors fixed in the analysis code (analysis/ and every in-repository module it loads, records.IMPORTED_CODE) after the go decision (Part 5.8: the analysis script 'is not edited between the go decision and the final analysis except to fix errors, each of which is recorded in Part 9'). One entry per fix, with the Table 9.1 row that records it. The analysis reports whether the analysis code still has the hash (records.code_hash()) recorded at the go decision (AMENDMENTS.json analysis_code_hash) or the hash reached from it by a chain of recorded errata (each code_hash_before the previous code_hash_after); any other hash is flagged. Owner: Role 4, Analysis and results. Read and checked by analysis/records.py.",
+  "fields": {
+    "id": "short identifier, unique, e.g. 'E1'",
+    "table_9_1_row": "the text of the Amendment column of Table 9.1 that records the fix",
+    "date": "YYYY-MM-DD",
+    "commit": "40-hex commit of the fix",
+    "files": "the repository-relative files the fix changed (list): analysis/ files, or the modules the analysis imports (records.IMPORTED_CODE)",
+    "description": "the error and its fix",
+    "code_hash_before": "records.code_hash() before the fix (SHA-256 over the analysis code and the modules it imports: analysis/*.py and records.IMPORTED_CODE, each as repository-relative path, NUL, bytes, NUL in sorted path order)",
+    "code_hash_after": "records.code_hash() after the fix (SHA-256 over the analysis code and the modules it imports: analysis/*.py and records.IMPORTED_CODE, each as repository-relative path, NUL, bytes, NUL in sorted path order)"
+  },
+  "errata": []
+}
