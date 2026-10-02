@@ -5,8 +5,10 @@
 #   bash scripts/setup_env.sh --locked   # everyone else: install exactly environment/requirements.lock.txt
 #   bash scripts/setup_env.sh --relock   # re-resolve and overwrite an existing lock (only by amendment)
 #
-# Requires Python 3.10 on Linux. Set PYTHON=/path/to/python3.10 if `python3.10` is not on PATH.
-# Creates .venv/ in the repository root (ignored by Git).
+# Requires Python 3.10; registered runs are made on Linux (other systems get a warning).
+# Set PYTHON=/path/to/python3.10 if `python3.10` is not on PATH.
+# Creates .venv/ in the repository root (ignored by Git); VENV=DIR creates it elsewhere, but the
+# workstation runbook (scripts/workstation.py) expects .venv, so keep the default on the workstation.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -20,7 +22,8 @@ case "${1:-}" in
 esac
 LOCK="$REPO/environment/requirements.lock.txt"
 if [ "$MODE" = "resolve" ] && [ -f "$LOCK" ]; then
-  echo "error: $LOCK exists; install it with --locked (re-resolving changes the pinned environment: --relock, by amendment)" >&2
+  echo "error: $LOCK exists; install it with --locked" \
+    "(re-resolving changes the pinned environment: --relock, by amendment)" >&2
   exit 1
 fi
 if [ "$MODE" = "locked" ] && [ ! -f "$LOCK" ]; then
@@ -65,7 +68,8 @@ EOF
 
 cd "$REPO"
 if [ "$MODE" = "locked" ]; then
-  # environment/workstation.json is the registered workstation (Table A.1); never overwrite it here.
+  # environment/workstation.json is the registered workstation (Appendix A; Table 3.1 "Hardware and device");
+  # never overwrite it here.
   "$VENV/bin/python" scripts/record_workstation.py --out "$VENV/workstation.local.json" >/dev/null
   echo "wrote $VENV/workstation.local.json (this machine; environment/workstation.json is unchanged)"
 else
@@ -77,7 +81,8 @@ if [ -f configs/omnisafe/SOURCE.json ]; then
 else
   "$VENV/bin/python" scripts/copy_omnisafe_configs.py
 fi
-"$VENV/bin/python" -m pytest -q   # fast tests; `pytest -m slow` trains for about ten minutes
+# The fast tests; `pytest -m slow` trains for about 40 minutes (HANDOVER.md section 12).
+"$VENV/bin/python" -m pytest -q
 if [ "$MODE" != "locked" ]; then
   mv "$LOCK.tmp" "$LOCK"
   trap - EXIT
@@ -85,4 +90,7 @@ if [ "$MODE" != "locked" ]; then
 fi
 echo
 echo "Environment ready. Activate with: source $VENV/bin/activate"
-echo "Next: python scripts/determinism_check.py   (from a clean commit)"
+if [ "$MODE" != "locked" ]; then
+  # X-allocation: the allocation (HANDOVER task 12) is recorded before any check that runs on the workstation
+  echo "Next: python scripts/workstation.py status   (the allocation, task 12, comes before the determinism checks)"
+fi

@@ -1,9 +1,27 @@
 # Code owners (First Tasks, Role 1 step 4). Every pull request needs a review from an owner of the
-# files it changes once the ruleset is on (First Tasks, Role 1 step 5; HANDOVER.md task 6).
+# files it changes once the ruleset is on (First Tasks, Role 1 step 5; HANDOVER.md).
 #
 # FILL IN THE REAL GITHUB USERNAMES, then remove the leading "# " of each rule line.
+# Known from the repository history: @Umair-Waseem (the pilot owner: the registration commit, PR #2
+# and main's own CODEOWNERS, commit 0854221) and @Abdullah9712 (author of PR #1, the ledger schema).
+# Three members' usernames and the second reviewer are still missing. main's version of this file
+# names @Umair-WaseemE on its /pilot/ line, a typo; this file uses @Umair-Waseem throughout.
+# A rule with an unknown username is ignored by GitHub, so the rules stay commented until every
+# username is known. Keep the owners' names in the comment lines; do not put comments on rule lines.
+#
+# Usernames and placeholders, and the people they stand for:
+#   @Umair-Waseem                         Muhammad Umair Waseem   (Role 1, pilot owner; known)
+#   @ENVIRONMENT_AND_TESTS_USERNAME       Muhammad Talha Jamil    (Role 2, Environment and tests)
+#   @METRICS_AND_INTERVENTIONS_USERNAME   Abdullah                (Role 3, Metrics and interventions)
+#   @Abdullah9712                         Muhammad Abdullah       (Role 4, Analysis and results; known)
+#   @STUDYB_AND_LITERATURE_USERNAME       Hamza Nisar             (Role 5, Study B and literature)
+#   @SECOND_REVIEWER_USERNAME             another member, or the supervisor Dr. Musadaq Mansoor if he
+#                                         is given write access (GitHub ignores an owner without
+#                                         write access)
+#
 # Give every path TWO owners: GitHub never counts a pull request author's own approval, so a path
 # with a single owner could never be merged by that owner once code-owner review is required.
+<<<<<<< Updated upstream
 # The second owner of each line is a placeholder for another member (or the supervisor, given write
 # access to the repository: GitHub ignores a code owner without write permission).
 # The last matching rule wins, so the specific lines after /results/ must stay below it.
@@ -26,3 +44,44 @@
 # /tests/test_ledger_schema.py    @Abdullah9712 @Umair-Waseem
 # /docs/ledger_schema_memo.md     @Abdullah9712 @Umair-Waseem
 # /studyb/              @STUDYB_AND_LITERATURE_USERNAME @Umair-Waseem
+=======
+# The last matching rule wins, so the specific lines must stay below the general ones.
+
+# Default: Muhammad Umair Waseem (pilot owner) and a second reviewer, for anything not listed below.
+# *                                  @Umair-Waseem @SECOND_REVIEWER_USERNAME
+
+# Pilot owner's folders: Muhammad Umair Waseem, with a second reviewer.
+# /pilot/                            @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /configs/                          @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /environment/                      @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /scripts/                          @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /prereg/                           @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /ledger/                           @Umair-Waseem @SECOND_REVIEWER_USERNAME
+# /.github/                          @Umair-Waseem @SECOND_REVIEWER_USERNAME
+
+# Role 2: Muhammad Talha Jamil, with Muhammad Umair Waseem.
+# /envs/                             @ENVIRONMENT_AND_TESTS_USERNAME @Umair-Waseem
+# /tests/test_envs_*                 @ENVIRONMENT_AND_TESTS_USERNAME @Umair-Waseem
+
+# Role 3: Abdullah, with Muhammad Umair Waseem (metrics/fixed_batch/ included).
+# /metrics/                          @METRICS_AND_INTERVENTIONS_USERNAME @Umair-Waseem
+# /tests/test_metrics_*              @METRICS_AND_INTERVENTIONS_USERNAME @Umair-Waseem
+
+# Role 4: Muhammad Abdullah, with Muhammad Umair Waseem.
+# /analysis/                         @Abdullah9712 @Umair-Waseem
+# /results/                          @Abdullah9712 @Umair-Waseem
+# /tests/test_analysis_*             @Abdullah9712 @Umair-Waseem
+# /tests/test_ledger_schema.py       @Abdullah9712 @Umair-Waseem
+# /tests/test_supplement_schema.py   @Abdullah9712 @Umair-Waseem
+# /docs/ledger_schema_memo.md        @Abdullah9712 @Umair-Waseem
+
+# Ledgers and supplement records: written only by the pilot owner's tools (Muhammad Umair Waseem),
+# with Muhammad Abdullah. These must stay below /results/.
+# /results/ledger.*                  @Umair-Waseem @Abdullah9712
+# /results/pilot/                    @Umair-Waseem @Abdullah9712
+# /results/supplement/               @Umair-Waseem @Abdullah9712
+
+# Role 5: Hamza Nisar, with Muhammad Umair Waseem (studyb/search/, the Appendix C record, included).
+# /studyb/                           @STUDYB_AND_LITERATURE_USERNAME @Umair-Waseem
+# /tests/test_studyb_*               @STUDYB_AND_LITERATURE_USERNAME @Umair-Waseem
+>>>>>>> Stashed changes

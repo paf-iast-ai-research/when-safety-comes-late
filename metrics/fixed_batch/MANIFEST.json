@@ -1,0 +1,63 @@
+{
+  "command": "python -m metrics.collect_fixed_batch --all",
+  "procedure": "1. env = safety_gymnasium.make(task) (the Safety-Gymnasium environment that OmniSafe wraps; no OmniSafe wrapper, because the batch holds raw observations and OmniSafe's action scaling is the identity for actions in [-1, 1]). 2. rng = numpy.random.default_rng(seed) (PCG64) draws the actions; obs, _ = env.reset(seed=seed). 3. Until n_states observations are stored: store obs (the observation the policy acts on); draw a = rng.uniform(env.action_space.low, env.action_space.high) (float64, one call per step); obs, reward, cost, terminated, truncated, info = env.step(a); if terminated or truncated, obs, _ = env.reset() (unseeded, so the layout stream continues from the seeded reset). The final observation of an episode is never stored. 4. numpy.save(path, numpy.asarray(batch, dtype=numpy.float32), allow_pickle=False) (C order, little-endian float32, shape (n_states, obs_dim)): OmniSafe presents float32 observations to the normaliser and the actor. 5. Row order is collection order; episode_starts lists the rows where an episode begins.",
+  "registered": "Table 2.3 'Fixed evaluation batch'; Appendix A",
+  "script": "metrics/collect_fixed_batch.py",
+  "tasks": {
+    "SafetyCarGoal1-v0": {
+      "dtype": "float32",
+      "episode_starts": [
+        0,
+        1000,
+        2000
+      ],
+      "file": "SafetyCarGoal1-v0.npy",
+      "n_states": 2048,
+      "seed": 0,
+      "sha256": "abc01be62d4937d456e95372281252f99cf38da64d8931520ee34edcea7ec618",
+      "shape": [
+        2048,
+        72
+      ]
+    },
+    "SafetyPointButton1-v0": {
+      "dtype": "float32",
+      "episode_starts": [
+        0,
+        1000,
+        2000
+      ],
+      "file": "SafetyPointButton1-v0.npy",
+      "n_states": 2048,
+      "seed": 0,
+      "sha256": "84ae724901954a6f8bfd96d55eebf7e6b7651536398e357175115e2570e98f0a",
+      "shape": [
+        2048,
+        76
+      ]
+    },
+    "SafetyPointGoal1-v0": {
+      "dtype": "float32",
+      "episode_starts": [
+        0,
+        1000,
+        2000
+      ],
+      "file": "SafetyPointGoal1-v0.npy",
+      "n_states": 2048,
+      "seed": 0,
+      "sha256": "5340625cdd26c93fa4e610f7d5c93ae2a1f4d050ba64c1786a7a15928a182558",
+      "shape": [
+        2048,
+        60
+      ]
+    }
+  },
+  "versions": {
+    "gymnasium": "0.28.1",
+    "mujoco": "2.3.0",
+    "numpy": "1.26.4",
+    "python": "3.10.21",
+    "safety-gymnasium": "0.4.1"
+  }
+}

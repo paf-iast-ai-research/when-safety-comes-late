@@ -19,7 +19,7 @@ Thumbs.db
 
 # Local build artifacts
 *.log
-# Run outputs and checkpoints live outside the repository (First Tasks, Role 1 step 4)
+# Checkpoints and run outputs are not committed (First Tasks, Role 1 step 4)
 runs/
 checkpoints/
 data/
@@ -32,3 +32,6 @@ progress.csv
 # Parquet ledgers are tracked on purpose (results/ledger.parquet, results/pilot/ledger.parquet)
 *.lock
 *.tmp
+
+# MuJoCo writes this into the working directory on a simulation instability (training or evaluation)
+MUJOCO_LOG.TXT

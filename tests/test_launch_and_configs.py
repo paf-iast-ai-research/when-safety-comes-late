@@ -1,7 +1,15 @@
-"""The launcher against the pinned OmniSafe (Table 3.1; Appendix A, Table A.1).
+"""The launcher and the contracts it enforces, against the pinned OmniSafe (Table 3.1; Appendix A,
+Table A.1), with regression tests of signals, classification and seed sets.
 
 Tests marked ``omnisafe`` need the pinned stack and are skipped without it; the test marked ``slow``
-trains two epochs twice (about ten minutes on one CPU thread) and runs with ``pytest -m slow``.
+trains one registered 20,000-step epoch twice, once through ``pilot.launch`` and once through
+``omnisafe.Agent``, and runs with ``pytest -m slow``. It predates the rule that slow tests train
+2,000-step epochs and stays at one epoch because it is the only test of the whole command line at
+the registered configuration. Its cost is an estimate, not a measurement: one 2,000-step epoch of the
+same configuration logs ``Time/Epoch`` of about 18 s on one CPU thread of the development machine,
+and rollout and update both grow linearly with the steps, so each side takes about three minutes and
+the test about six. What the pilot owner's mixin adds to OmniSafe's run is tested at 2,000 steps per
+epoch (tests/test_core_algorithms.py, tests/test_core_restore.py).
 """
 
 from __future__ import annotations
@@ -9,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import types
 from pathlib import Path
 
 import pytest
@@ -56,7 +65,7 @@ def test_appendix_a_values_are_in_the_copied_configs() -> None:
     assert ppolag["train_cfgs"]["parallel"] == R.PARALLEL_PROCESSES
     # Documented deviations handled by the launcher's registered overrides:
     assert ppolag["train_cfgs"]["torch_threads"] == 16  # Table 3.1 requires 1
-    assert ppolag["logger_cfgs"]["save_model_freq"] == 100  # Part 3.4 requires every 10 epochs
+    assert ppolag["logger_cfgs"]["save_model_freq"] == 100  # Part 3.4 and Table 2.3 require every 200,000 steps, that is every 10 epochs
     pid = yaml.safe_load((CONFIGS / "CPPOPID.yaml").read_text())["defaults"]
     assert pid["lagrange_cfgs"]["cost_limit"] == R.COST_LIMIT
     assert pid["lagrange_cfgs"]["lagrangian_multiplier_init"] == R.LAGRANGE_MULTIPLIER_INIT
@@ -82,9 +91,10 @@ def test_build_config_applies_exactly_the_registered_overrides(tmp_path) -> None
     pytest.importorskip("omnisafe")
     from omnisafe.utils.config import get_default_kwargs_yaml
 
-    from pilot.launch import build_config
+    from pilot.launch import build_config, registered_overrides
 
-    cfgs = build_config(_det_spec(10_000_000), tmp_path)
+    spec = _det_spec(10_000_000)
+    cfgs = build_config(spec, tmp_path)
     assert cfgs.seed == 0
     assert cfgs.train_cfgs.torch_threads == 1 and cfgs.train_cfgs.device == "cpu"
     assert cfgs.train_cfgs.epochs == 500 and cfgs.train_cfgs.total_steps == 10_000_000
@@ -92,6 +102,9 @@ def test_build_config_applies_exactly_the_registered_overrides(tmp_path) -> None
     assert cfgs.exp_name == "PPOLag-{SafetyPointGoal1-v0}" and cfgs.algo == "PPOLag"
     default = get_default_kwargs_yaml("PPOLag", R.PRIMARY_TASK, "on-policy").todict()
     built = cfgs.todict()
+    # the keys build_config adds: exp_name, env_id and algo (as AlgoWrapper does), the overrides, pilot_cfgs
+    assert set(built) - set(default) == {"exp_name", "env_id", "algo", "exp_increment_cfgs", "pilot_cfgs"}
+    assert built["exp_increment_cfgs"] == registered_overrides(spec, tmp_path)
     changed = {k for k in default if default[k] != built[k]}
     assert changed == {"train_cfgs", "logger_cfgs"}  # seed 0 and steps_per_epoch equal their defaults
     train_changed = {k for k in built["train_cfgs"] if built["train_cfgs"][k] != default["train_cfgs"].get(k)}
@@ -116,7 +129,7 @@ def test_config_hash_does_not_depend_on_the_run_directory(tmp_path) -> None:
 
 
 @pytest.mark.omnisafe
-def test_tampered_defaults_are_refused(tmp_path) -> None:
+def test_tampered_defaults_are_refused() -> None:
     pytest.importorskip("omnisafe")
     from omnisafe.utils.config import get_default_kwargs_yaml
 
@@ -160,17 +173,22 @@ def test_refusals_happen_before_the_claim_and_leave_nothing(tmp_path, monkeypatc
     # a configuration that differs from Table A.1 is a refusal, not a crash (never an exclusion)
     monkeypatch.setattr(R, "UPDATE_ITERS", R.UPDATE_ITERS + 1)
     assert launch.main(argv) == launch.EXIT_REFUSED
-    assert "REFUSED" in capsys.readouterr().err and sorted(p.name for p in run_dir.iterdir()) == ["spec.json"]
+    err = capsys.readouterr().err
+    assert "REFUSED" in err and "update_iters" in err
+    assert sorted(p.name for p in run_dir.iterdir()) == ["spec.json"]
     monkeypatch.undo()
-    # an open question refuses without --allow-pending
+    # an open question refuses without --allow-pending (every key is answered: Q-rounding is pinned open)
+    monkeypatch.setattr(R, "ANSWERED_QUESTIONS", frozenset(R.ANSWERED_QUESTIONS) - {"Q-rounding"})
     pending = RunSpec.from_dict({**spec.to_dict(), "pending": ["Q-rounding"]})
     (run_dir / "spec.json").write_text(pending.to_json())
     assert launch.main(argv) == launch.EXIT_REFUSED
+    assert "Q-rounding" in capsys.readouterr().err
     assert sorted(p.name for p in run_dir.iterdir()) == ["spec.json"]
     # a directory another process has claimed is refused, and its claim is left in place
     (run_dir / "spec.json").write_text(spec.to_json())
     (run_dir / launch.CLAIM_FILE).write_text("12345\n")
     assert launch.main(argv) == launch.EXIT_REFUSED
+    assert "already claimed" in capsys.readouterr().err
     assert (run_dir / launch.CLAIM_FILE).read_text() == "12345\n"
 
 
@@ -194,7 +212,7 @@ def test_an_evaluator_module_without_its_function_is_unavailable(monkeypatch) ->
 
     monkeypatch.setattr(contracts, "EVALUATOR_TARGET", "json:evaluate_run")
     with pytest.raises(PluginUnavailableError, match="no function"):
-        contracts.load_evaluator()
+        contracts.load_evaluator(_det_spec())
 
 
 def test_classify_training(tmp_path) -> None:
@@ -254,28 +272,27 @@ def test_selection_window_and_required_checkpoints() -> None:
     spec = RunSpec(run_id="X-s0", study="A", task=R.PRIMARY_TASK, arm="N0.25-abrupt-total", seed=0, total_steps=10_000_000,
                    base_algo="PPOLag", plugin="study_a", group="main", N=0.25, onset_step=2_500_000)
     steps = expected_checkpoint_steps(spec)
-    assert 2_500_000 in steps and steps[0] == 0 and steps[-1] == 10_000_000 and len(steps) == 52
-
-
-def test_off_grid_totals_wait_for_the_selection_window_question() -> None:
-    from pilot import manifest
-
-    for s in manifest.design("main") + manifest.design("treatment"):
-        off = s.total_steps % R.CHECKPOINT_INTERVAL_STEPS != 0
-        assert ("Q-selection-window" in s.pending) == off
+    # the grid (51), the onset and, for a Study A plug-in, the manipulation-check step onset + 200,000
+    # (contracts.extra_checkpoint_steps)
+    assert {2_500_000, 2_700_000} <= set(steps) and steps[0] == 0 and steps[-1] == 10_000_000 and len(steps) == 53
 
 
 @pytest.mark.omnisafe
 @pytest.mark.slow
 def test_launcher_reproduces_omnisafe_agent_bit_for_bit(tmp_path) -> None:
-    """Two epochs through pilot.launch equal two epochs through omnisafe.Agent (same seed, 1 thread),
-    and the pilot owner's mixin adds the onset checkpoint and the per-epoch batch metrics."""
+    """One epoch through pilot.launch equals one epoch through omnisafe.Agent (same seed, 1 thread).
+
+    The mixin adds two columns of its own (the batch metrics) and the rest of the learner state to
+    each checkpoint; the extra and onset checkpoints and the batch metrics' relation to OmniSafe's
+    50-episode windows are tested at 2,000 steps per epoch (tests/test_core_restore.py,
+    tests/test_core_algorithms.py).
+    """
     import csv
     import subprocess
     import sys
 
     pytest.importorskip("omnisafe")
-    spec = RunSpec.from_dict({**_det_spec(2 * R.STEPS_PER_EPOCH).to_dict(), "onset_step": R.STEPS_PER_EPOCH})
+    spec = _det_spec(R.STEPS_PER_EPOCH)
     run_dir = tmp_path / "launch"
     run_dir.mkdir()
     (run_dir / "spec.json").write_text(spec.to_json())
@@ -288,7 +305,7 @@ def test_launcher_reproduces_omnisafe_agent_bit_for_bit(tmp_path) -> None:
     agent_dir = tmp_path / "agent"
     script = (
         "import omnisafe, sys\n"
-        "cfg={'seed':0,'train_cfgs':{'total_steps':40000,'device':'cpu','torch_threads':1,'vector_env_nums':1,'parallel':1},"
+        "cfg={'seed':0,'train_cfgs':{'total_steps':20000,'device':'cpu','torch_threads':1,'vector_env_nums':1,'parallel':1},"
         "'logger_cfgs':{'save_model_freq':10,'log_dir':sys.argv[1]}}\n"
         "omnisafe.Agent('PPOLag','SafetyPointGoal1-v0',custom_cfgs=cfg).learn()\n"
     )
@@ -301,20 +318,13 @@ def test_launcher_reproduces_omnisafe_agent_bit_for_bit(tmp_path) -> None:
             return [{k: v for k, v in r.items() if not k.startswith("Time/")} for r in csv.DictReader(fh)]
 
     ours_rows, their_rows = rows(run_dir / "omnisafe"), rows(agent_dir)
-    assert len(ours_rows) == len(their_rows) == 2
+    assert len(ours_rows) == len(their_rows) == 1
     assert [{k: r[k] for k in t} for r, t in zip(ours_rows, their_rows)] == their_rows  # every OmniSafe column
-    # batch metrics: epoch 0 has 20 episodes (< 50), so the batch mean equals OmniSafe's window mean;
-    # in epoch 1 the window holds 40 episodes, so window = (batch0 + batch1) / 2
-    b0, b1 = float(ours_rows[0]["Metrics/BatchEpCost"]), float(ours_rows[1]["Metrics/BatchEpCost"])
-    assert b0 == pytest.approx(float(ours_rows[0]["Metrics/EpCost"]))
-    assert (b0 + b1) / 2 == pytest.approx(float(ours_rows[1]["Metrics/EpCost"]), rel=1e-5)
+    assert set(ours_rows[0]) - set(their_rows[0]) == {"Metrics/BatchEpCost", "Metrics/BatchEpRet"}
     import torch
 
-    saved = sorted(p.name for p in (run_dir / "omnisafe").glob("**/torch_save/*.pt"))
-    assert saved == ["epoch-0.pt", "epoch-1.pt", "epoch-2.pt"]  # epoch-1.pt is the onset checkpoint
-    assert sorted(p.name for p in agent_dir.glob("**/torch_save/*.pt")) == ["epoch-0.pt", "epoch-2.pt"]
-    (ours,) = list((run_dir / "omnisafe").glob("**/torch_save/epoch-2.pt"))
-    (theirs,) = list(agent_dir.glob("**/torch_save/epoch-2.pt"))
+    (ours,) = list((run_dir / "omnisafe").glob("**/torch_save/epoch-1.pt"))
+    (theirs,) = list(agent_dir.glob("**/torch_save/epoch-1.pt"))
     a, b = torch.load(ours, weights_only=False), torch.load(theirs, weights_only=False)
     for key, tensor in b["pi"].items():
         assert torch.equal(a["pi"][key], tensor)
@@ -322,9 +332,7 @@ def test_launcher_reproduces_omnisafe_agent_bit_for_bit(tmp_path) -> None:
     full = torch.load(ours, weights_only=True)
     assert {"pi", "obs_normalizer", "reward_critic", "cost_critic", "actor_optimizer", "reward_critic_optimizer",
             "cost_critic_optimizer", "actor_scheduler", "lagrange", "lambda_optimizer", "episode_windows"} <= set(full)
-    window = full["episode_windows"]["Metrics/EpCost"]  # 40 episodes after two epochs; J_C is its mean
-    assert len(window) == 40 and float(window.mean()) == pytest.approx(float(ours_rows[1]["Metrics/EpCost"]), rel=1e-5)
-    assert float(full["lagrange"]["value"]) == pytest.approx(float(their_rows[1]["Metrics/LagrangeMultiplier"]))
+    assert float(full["lagrange"]["value"]) == pytest.approx(float(their_rows[0]["Metrics/LagrangeMultiplier"]))
 
 
 def test_multiplier_state_stores_plain_numbers(tmp_path) -> None:
@@ -371,7 +379,7 @@ def test_the_thread_check_after_the_factory_does_not_reset_the_count() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Regression tests of round 6 (signals, classification, plug-in factories, contracts)
+# Signals, classification, plug-in factories and contracts
 # ---------------------------------------------------------------------------
 
 
@@ -503,7 +511,8 @@ def test_malformed_evaluations_break_the_contract_not_the_launcher(tmp_path) -> 
     (omni / "torch_save").mkdir(parents=True)
     for step in range(0, R.TOTAL_STEPS + 1, R.CHECKPOINT_INTERVAL_STEPS):
         (omni / "torch_save" / f"epoch-{step // R.STEPS_PER_EPOCH}.pt").write_bytes(b"")
-    window = range(R.TOTAL_STEPS - 9 * R.CHECKPOINT_INTERVAL_STEPS, R.TOTAL_STEPS + 1, R.CHECKPOINT_INTERVAL_STEPS)
+    window = range(R.TOTAL_STEPS - (R.SELECTION_WINDOW_CHECKPOINTS - 1) * R.CHECKPOINT_INTERVAL_STEPS, R.TOTAL_STEPS + 1,
+                   R.CHECKPOINT_INTERVAL_STEPS)
     good = {"final_cost": 20.0, "final_return": 5.0, "episodes": R.EVAL_EPISODES,
             "selection_seeds": list(range(R.EVAL_EPISODES)), "selection": {s: [24.0, 1.0] for s in window}}
     validate_evaluation(good, spec, omni)
@@ -514,7 +523,7 @@ def test_malformed_evaluations_break_the_contract_not_the_launcher(tmp_path) -> 
             validate_evaluation({**good, **bad}, spec, omni)
 
 
-def _determinism_script():
+def _determinism_script() -> types.ModuleType:
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("determinism_check", REPO / "scripts" / "determinism_check.py")
@@ -549,7 +558,7 @@ def test_determinism_check_refuses_before_training(tmp_path, monkeypatch) -> Non
 
 
 # ---------------------------------------------------------------------------
-# Regression tests of round 7 (two signals at once, handler restoration, seed sets)
+# Two signals at once, handler restoration and seed sets
 # ---------------------------------------------------------------------------
 
 
@@ -633,7 +642,7 @@ def test_seed_sets_must_be_whole_numbers() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Regression tests of round 8 (a signal before training is guarded; 64-bit seeds)
+# A signal before training is guarded; 64-bit seeds
 # ---------------------------------------------------------------------------
 
 
